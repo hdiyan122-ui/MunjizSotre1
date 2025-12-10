@@ -60,7 +60,7 @@ class ProductManager {
             // Map database fields to expected format
             // Handle both admin dashboard format and website format
             const title = p.title || p.name || 'Untitled';
-            const description = p.description || '';
+            const description = p.description || p.shortDesc || '';
             
             return {
                 id: p.id,
@@ -69,9 +69,10 @@ class ProductManager {
                 price: p.price || 0,
                 category: p.category || 'services',
                 icon: p.icon || '📦',
+                image: p.image || null,  // Include Base64 image if available
                 featured: p.featured || false,
                 popular: p.popular || false,
-                created: new Date(p.created || new Date())
+                created: new Date(p.created || p.createdAt || new Date())
             };
         });
 
@@ -239,9 +240,16 @@ function renderProductCard(product) {
 
     const formattedPrice = currencyManager.format(product.price);
 
+    // Determine image source - use Base64 if available, fallback to icon
+    let imageContent = `<span style="font-size: 4rem;">${product.icon}</span>`;
+    if (product.image) {
+        // Check if it's a Base64 image (starts with data:) or a URL
+        imageContent = `<img src="${product.image}" alt="${product.title}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+
     card.innerHTML = `
         <div class="product-image">
-            <span style="font-size: 4rem;">${product.icon}</span>
+            ${imageContent}
         </div>
         <div class="product-content">
             <span class="product-category">${i18n.t(product.category === 'courses' ? 'cat_courses' : product.category === 'ebooks' ? 'cat_ebooks' : product.category === 'ai-tools' ? 'cat_ai_tools' : 'cat_services')}</span>

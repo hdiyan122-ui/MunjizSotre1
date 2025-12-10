@@ -17,6 +17,7 @@ class AdminDashboard {
         this.loadData();
         this.setupEventListeners();
         this.setupNavigation();
+        this.setupImageHandler();
         this.setupTheme();
         this.renderDashboard();
     }
@@ -164,6 +165,44 @@ class AdminDashboard {
                 this.switchSection(section);
             });
         });
+    }
+
+    // ============================================
+    // IMAGE HANDLING - BASE64 CONVERSION
+    // ============================================
+
+    setupImageHandler() {
+        const imageInput = document.getElementById('productImage');
+        if (imageInput) {
+            imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
+        }
+    }
+
+    handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Use ImageHandler to convert file to Base64
+        imageHandler.fileToBase64(file)
+            .then(base64String => {
+                // Store Base64 temporarily in form
+                document.getElementById('productForm').dataset.imageBase64 = base64String;
+                
+                // Show preview
+                const previewContainer = document.getElementById('imagePreviewContainer');
+                const previewImg = document.getElementById('imagePreviewImg');
+                
+                previewImg.src = base64String;
+                previewContainer.style.display = 'block';
+                
+                // Optional: Show file size info
+                const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+                console.log(`Image uploaded: ${file.name} (${fileSize}MB)`);
+            })
+            .catch(error => {
+                this.showNotification(`Error: ${error.message}`, 'error');
+                e.target.value = '';
+            });
     }
 
     // ============================================
@@ -374,6 +413,11 @@ class AdminDashboard {
         const modal = document.getElementById('productModal');
         const form = document.getElementById('productForm');
         form.reset();
+        
+        // Reset image-related elements
+        delete form.dataset.imageBase64;
+        document.getElementById('imagePreviewContainer').style.display = 'none';
+        document.getElementById('imagePreviewImg').src = '';
 
         if (productId) {
             const product = this.products.find(p => p.id === productId);
@@ -382,9 +426,18 @@ class AdminDashboard {
                 document.getElementById('productName').value = product.name;
                 document.getElementById('productCategory').value = product.category;
                 document.getElementById('productPrice').value = product.price;
-                document.getElementById('productImage').value = product.image;
                 document.getElementById('productShortDesc').value = product.shortDesc;
                 document.getElementById('productLongDesc').value = product.longDesc;
+                
+                // Store existing image (could be Base64 or URL)
+                form.dataset.imageBase64 = product.image;
+                
+                // Show preview of existing image
+                const previewContainer = document.getElementById('imagePreviewContainer');
+                const previewImg = document.getElementById('imagePreviewImg');
+                previewImg.src = product.image;
+                previewContainer.style.display = 'block';
+                
                 form.dataset.productId = productId;
             }
         } else {
@@ -402,12 +455,21 @@ class AdminDashboard {
     handleProductSubmit(e) {
         e.preventDefault();
 
-        const productId = document.getElementById('productForm').dataset.productId;
+        const form = document.getElementById('productForm');
+        const productId = form.dataset.productId;
+        
+        // Get Base64 image - either new upload or existing
+        const imageBase64 = form.dataset.imageBase64;
+        if (!imageBase64) {
+            this.showNotification('Please upload an image', 'error');
+            return;
+        }
+
         const productData = {
             name: document.getElementById('productName').value,
             category: document.getElementById('productCategory').value,
             price: parseFloat(document.getElementById('productPrice').value),
-            image: document.getElementById('productImage').value,
+            image: imageBase64,  // Store Base64 directly
             shortDesc: document.getElementById('productShortDesc').value,
             longDesc: document.getElementById('productLongDesc').value
         };
